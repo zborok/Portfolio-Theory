@@ -1,0 +1,671 @@
+---
+title: "AM14 Individual Assignment 1"
+author: "Zervaan Borok"
+date: "1/27/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br>
+
+# **Part 1: Portfolio Theory with Matrix Algebra**
+
+<br>
+
+### **Q1.1-1.4 Initial Exploration**
+```{r}
+library(tidyverse)
+
+# Read in Data
+
+df <- read.csv("C:\\Users\\zerva\\Documents\\AM14\\PS1_Daily.csv", header = TRUE)
+names(df)[names(df) == "ï..DATE"] <- "DATE"
+df_11 <- df[3281:6301,]
+df <- df[1:3280,]
+tail(df)
+head(df_11)
+```
+
+
+```{r}
+# Means
+
+print(mean(df$MSFT))
+print(mean(df$GE))
+print(mean(df$JPM))
+```
+
+
+```{r}
+# Variances
+
+print(var(df$MSFT))
+print(var(df$GE))
+print(var(df$JPM))
+```
+
+
+```{r}
+# Pairwise Correlations
+
+print(cov(df$MSFT, df$GE))
+print(cov(df$MSFT, df$JPM))
+print(cov(df$GE, df$JPM))
+```
+
+
+```{r}
+# Matrix of Returns
+
+returns_MSFT <- df$MSFT
+returns_GE <- df$GE
+returns_JPM <- df$JPM
+
+returns <- cbind(returns_MSFT, returns_GE, returns_JPM)
+head(returns)
+```
+
+
+```{r}
+# Expected Returns
+
+means <- colMeans(returns)
+print(means)
+```
+
+
+```{r}
+# Matrix of portfolio weights
+
+weights_equal <- array(1/3, c(3,1))
+
+# Expected Returns with above weights
+
+expected_returns <- means * weights_equal
+expected_returns <- t(expected_returns)
+expected_returns <- as.data.frame(expected_returns)
+names(expected_returns)[names(expected_returns) == "V1"] <- "expected_returns_MSFT"
+names(expected_returns)[names(expected_returns) == "V2"] <- "expected_returns_GE"
+names(expected_returns)[names(expected_returns) == "V3"] <- "expected_returns_JPM"
+print(expected_returns)
+```
+
+
+```{r}
+# Covariance Matrix of MSFT, JPM, GE
+
+covariance <- cov(returns)
+print(covariance)
+```
+
+
+### **Q1.5(a) Equally Weighted Portfolio**
+```{r}
+# Expected Return, Volatility, Sharpe Ratio, and Variance of Equally Weighted Portfolio
+
+rf <- df$SPRTRN
+
+means <- array(means, c(3,1))
+
+returns_equal <- returns%*%weights_equal
+
+# Expected Return
+mean_ew <- mean(returns_equal)
+
+# Volatility
+vol_ew <- sd(returns_equal)
+
+# Variance
+var_ew <- var(returns_equal)
+
+# Sharpe Ratio
+SR_ew <- (mean(returns_equal) - mean(rf))/sd(returns_equal)
+
+df_ew_1 <- as.data.frame(cbind(mean_ew, vol_ew, var_ew, SR_ew))
+
+rownames(df_ew_1) <- c("Equal Weight Portfolio (1990-2002)")
+colnames(df_ew_1) <- c("Expected Return", "Sample Volatility", "Sample Variance", "Sharpe Ratio")
+
+df_ew_1
+```
+
+
+### **Q1.5(b) Portfolio Y**
+```{r}
+# Expected Return, Volatility, Sharpe Ratio, and Variance of Portfolio with 'y' vector weights
+
+weights_y <- array(c(0.8, 0.4, -0.2), dim = c(3,1))
+
+returns_y <- returns%*%weights_y
+
+# Expected Return
+mean_y <- mean(returns_y)
+
+# Volatility
+vol_y <- sd(returns_y)
+
+# Variance
+var_y <- var(returns_y)
+
+# Sharpe Ratio
+SR_y <- (mean(returns_y) - mean(rf))/sd(returns_y)
+
+df_y_1 <- as.data.frame(cbind(mean_y, vol_y, var_y, SR_y))
+
+rownames(df_y_1) <- c("Portfolio Y (1990-2002)")
+colnames(df_y_1) <- c("Expected Return", "Sample Volatility", "Sample Variance", "Sharpe Ratio")
+
+df_y_1
+```
+
+
+```{r}
+# Covariance between Portfolio Y and Equally Weighted Portfolio
+
+print(cov(returns_equal, returns_y))
+```
+
+
+### **Q1.6 Minimum Variance Portfolio**
+```{r}
+# Obtain weights for Minimum Variance Portfolio
+
+weights_minvar <- solve(covariance)%*% array(1, c(3,1))
+weights_minvar <- weights_minvar/sum(weights_minvar)
+print(weights_minvar)
+```
+
+
+```{r}
+# Obtain Expected Return, Volatility, Sharpe Ratio, and Variance of Minimum Variance Portfolio
+
+returns_minvar <- returns%*%weights_minvar
+mean_minvar <-t(weights_minvar)%*%means 
+vol_minvar <- sqrt(t(weights_minvar)%*%covariance%*%weights_minvar) 
+var_minvar <- vol_minvar**2
+SR_minvar <- (mean_minvar-mean(rf))/vol_minvar
+
+df_minvar_1 <- as.data.frame(cbind(mean_minvar, vol_minvar, var_minvar, SR_minvar))
+
+rownames(df_minvar_1) <- c("Minimum Variance Portfolio (1990-2002)")
+colnames(df_minvar_1) <- c("Expected Return", "Sample Volatility", "Sample Variance", "Sharpe Ratio")
+
+df_minvar_1
+```
+
+
+### **Tangency Portfolio**
+```{r}
+# Obtain weights for Tangency Portfolio
+
+weights_tangency<-solve(covariance)%*% (means - mean(rf))
+weights_tangency<-weights_tangency/sum(weights_tangency)
+print(weights_tangency)
+```
+
+
+```{r}
+# Obtain Expected Return, Volatility, Sharpe Ratio, and Variance of Tangency Portfolio
+
+returns_tangency <- returns%*%weights_tangency
+mean_tangency <- t(weights_tangency)%*% means
+vol_tangency <- sqrt(t(weights_tangency)%*%covariance%*%weights_tangency)
+var_tangency <- vol_tangency**2
+SR_tangency <- (mean_tangency-mean(rf))/vol_tangency
+
+df_tangency_1 <- as.data.frame(cbind(mean_tangency, vol_tangency, var_tangency, SR_tangency))
+
+rownames(df_tangency_1) <- c("Tangency Portfolio (1990-2002)")
+colnames(df_tangency_1) <- c("Expected Return", "Sample Volatility", "Sample Variance", "Sharpe Ratio")
+
+df_tangency_1
+```
+
+
+### **Q1.7 MSFT Matching Portfolio**
+```{r}
+# Weights for MSFT Matching Portfolio
+
+MSFT_mean <- means[1]
+
+alpha_1 <-as.numeric((MSFT_mean-mean_minvar)/(mean_tangency -mean_minvar)) #find an optimal alpha,
+
+w_1 <-alpha_1*weights_tangency+ (1-alpha_1)*weights_minvar #find portfolio weights
+
+print(w_1)
+```
+
+
+```{r}
+# Expected Return, Volatility, Sharpe Ratio, and Variance of MSFT Matching Portfolio
+
+returns_MSFT_Portfolio <- returns%*%w_1
+mean_MSFT<-t(w_1)%*%means 
+vol_MSFT<- sqrt(t(w_1)%*%covariance%*%w_1) 
+var_MSFT <- vol_MSFT**2
+SR_MSFT <- (mean_MSFT-mean(rf))/vol_MSFT
+
+df_MSFT_1 <- as.data.frame(cbind(mean_MSFT, vol_MSFT, var_MSFT, SR_MSFT))
+
+rownames(df_MSFT_1) <- c("MSFT Matching Portfolio (1990-2002)")
+colnames(df_MSFT_1) <- c("Expected Return", "Sample Volatility", "Sample Variance", "Sharpe Ratio")
+
+df_MSFT_1
+```
+
+
+```{r}
+# Covariance between MSFT matching portfolio and Global minimum portfolio
+
+print(cov(returns_MSFT_Portfolio, returns_minvar))
+```
+
+
+### **Q1.8 Efficient Frontier**
+```{r fig.width=14}
+# Plot Entire Efficient Frontier
+
+req_returns<-seq(from=0.0001,to=0.002, by=0.00001) 
+
+n <- length(req_returns)
+means_1 <- array(0, c(n,1))
+volatilities <- array(0, c(n,1))
+
+for (i in 1:n){
+mu_0<-req_returns[i] #pick a particular expected return
+alpha<-as.numeric((mu_0-mean_minvar)/(mean_tangency -mean_minvar)) #find an optimal alpha,
+
+w<-alpha*weights_tangency+ (1-alpha)*weights_minvar #find portfolio weights
+means_1[i]<-t(w)%*%means #find portfolio return
+volatilities[i]<-sqrt(t(w)%*%covariance%*%w) # and its volatility
+}
+plot(volatilities, means_1, main="Efficient portfolio frontier", 
+xlab="Volatility (st.dev.)", ylab="Expected return")
+```
+
+
+<br>
+
+## **Q1.9 Re-Running Code with Time Period 2/1/2003 - 31/12/2014**
+
+
+```{r}
+# Means
+
+print(mean(df_11$MSFT))
+print(mean(df_11$GE))
+print(mean(df_11$JPM))
+```
+
+
+```{r}
+# Variances
+
+print(var(df_11$MSFT))
+print(var(df_11$GE))
+print(var(df_11$JPM))
+```
+
+
+```{r}
+# Pairwise Correlations
+
+print(cov(df_11$MSFT, df_11$GE))
+print(cov(df_11$MSFT, df_11$JPM))
+print(cov(df_11$GE, df_11$JPM))
+```
+
+
+```{r}
+# Matrix of Returns
+
+returns_MSFT <- df_11$MSFT
+returns_GE <- df_11$GE
+returns_JPM <- df_11$JPM
+
+returns <- cbind(returns_MSFT, returns_GE, returns_JPM)
+head(returns)
+```
+
+
+```{r}
+# Expected Returns
+
+means <- colMeans(returns)
+print(means)
+```
+
+
+```{r}
+# Matrix of portfolio weights
+
+weights_equal <- array(1/3, c(3,1))
+
+# Expected Returns with above weights
+
+expected_returns <- means * weights_equal
+expected_returns <- t(expected_returns)
+expected_returns <- as.data.frame(expected_returns)
+names(expected_returns)[names(expected_returns) == "V1"] <- "expected_returns_MSFT"
+names(expected_returns)[names(expected_returns) == "V2"] <- "expected_returns_GE"
+names(expected_returns)[names(expected_returns) == "V3"] <- "expected_returns_JPM"
+print(expected_returns)
+```
+
+
+```{r}
+# Covariance Matrix of MSFT, JPM, GE
+
+covariance <- cov(returns)
+print(covariance)
+```
+
+
+### **Equally Weighted Portfolio**
+```{r}
+# Expected Return, Volatility, Sharpe Ratio, and Variance of Equally Weighted Portfolio
+
+rf <- df_11$SPRTRN
+
+means <- array(means, c(3,1))
+
+returns_equal <- returns%*%weights_equal
+
+# Expected Return
+mean_ew <- mean(returns_equal)
+
+# Volatility
+vol_ew <- sd(returns_equal)
+
+# Variance
+var_ew <- var(returns_equal)
+
+# Sharpe Ratio
+SR_ew <- (mean(returns_equal) - mean(rf))/sd(returns_equal)
+
+df_ew_2 <- as.data.frame(cbind(mean_ew, vol_ew, var_ew, SR_ew))
+
+rownames(df_ew_2) <- c("Equal Weight Portfolio (2003-2014)")
+colnames(df_ew_2) <- c("Expected Return", "Sample Volatility", "Sample Variance", "Sharpe Ratio")
+
+df_ew_2
+```
+
+
+### **Portfolio Y**
+```{r}
+# Expected Return, Volatility, Sharpe Ratio, and Variance of Portfolio with 'y' vector weights
+
+weights_y <- array(c(0.8, 0.4, -0.2), dim = c(3,1))
+
+returns_y <- returns%*%weights_y
+
+# Expected Return
+mean_y <- mean(returns_y)
+
+# Volatility
+vol_y <- sd(returns_y)
+
+# Variance
+var_y <- var(returns_y)
+
+# Sharpe Ratio
+SR_y <- (mean(returns_y) - mean(rf))/sd(returns_y)
+
+df_y_2 <- as.data.frame(cbind(mean_y, vol_y, var_y, SR_y))
+
+rownames(df_y_2) <- c("Portfolio Y (2003-2014)")
+colnames(df_y_2) <- c("Expected Return", "Sample Volatility", "Sample Variance", "Sharpe Ratio")
+
+df_y_2
+```
+
+
+```{r}
+# Covariance between Portfolio Y and Equally Weighted Portfolio
+
+print(cov(returns_equal, returns_y))
+```
+
+
+### **Minimum Variance Portfolio**
+```{r}
+# Obtain weights for Minimum Variance Portfolio
+
+weights_minvar <- solve(covariance)%*% array(1, c(3,1))
+weights_minvar <- weights_minvar/sum(weights_minvar)
+print(weights_minvar)
+```
+
+
+```{r}
+# Obtain Expected Return, Volatility, Sharpe Ratio, and Variance of Minimum Variance Portfolio
+
+returns_minvar <- returns%*%weights_minvar
+mean_minvar <-t(weights_minvar)%*%means 
+vol_minvar <- sqrt(t(weights_minvar)%*%covariance%*%weights_minvar) 
+var_minvar <- vol_minvar**2
+SR_minvar <- (mean_minvar-mean(rf))/vol_minvar
+
+df_minvar_2 <- as.data.frame(cbind(mean_minvar, vol_minvar, var_minvar, SR_minvar))
+
+rownames(df_minvar_2) <- c("Minimum Variance Portfolio (2003-2014)")
+colnames(df_minvar_2) <- c("Expected Return", "Sample Volatility", "Sample Variance", "Sharpe Ratio")
+
+df_minvar_2
+```
+
+
+### **Tangency Portfolio**
+```{r}
+# Obtain weights for Tangency Portfolio
+
+weights_tangency<-solve(covariance)%*% (means - mean(rf))
+weights_tangency<-weights_tangency/sum(weights_tangency)
+print(weights_tangency)
+```
+
+
+```{r}
+# Obtain Expected Return, Volatility, Sharpe Ratio, and Variance of Tangency Portfolio
+
+returns_tangency <- returns%*%weights_tangency
+mean_tangency <- t(weights_tangency)%*% means
+vol_tangency <- sqrt(t(weights_tangency)%*%covariance%*%weights_tangency)
+var_tangency <- vol_tangency**2
+SR_tangency <- (mean_tangency-mean(rf))/vol_tangency
+
+df_tangency_2 <- as.data.frame(cbind(mean_tangency, vol_tangency, var_tangency, SR_tangency))
+
+rownames(df_tangency_2) <- c("Tangency Portfolio (2003-2014)")
+colnames(df_tangency_2) <- c("Expected Return", "Sample Volatility", "Sample Variance", "Sharpe Ratio")
+
+df_tangency_2
+```
+
+
+### **MSFT Matching Portfolio**
+```{r}
+# Weights for MSFT Matching Portfolio
+
+MSFT_mean <- means[1]
+
+alpha_1 <-as.numeric((MSFT_mean-mean_minvar)/(mean_tangency -mean_minvar)) #find an optimal alpha,
+
+w_1 <-alpha_1*weights_tangency+ (1-alpha_1)*weights_minvar #find portfolio weights
+
+print(w_1)
+```
+
+
+```{r}
+# Expected Return, Volatility, Sharpe Ratio, and Variance of MSFT Matching Portfolio
+
+returns_MSFT_Portfolio <- returns%*%w_1
+mean_MSFT<-t(w_1)%*%means 
+vol_MSFT<- sqrt(t(w_1)%*%covariance%*%w_1) 
+var_MSFT <- vol_MSFT**2
+SR_MSFT <- (mean_MSFT-mean(rf))/vol_MSFT
+
+df_MSFT_2 <- as.data.frame(cbind(mean_MSFT, vol_MSFT, var_MSFT, SR_MSFT))
+
+rownames(df_MSFT_2) <- c("MSFT Matching Portfolio (2003-2014)")
+colnames(df_MSFT_2) <- c("Expected Return", "Sample Volatility", "Sample Variance", "Sharpe Ratio")
+
+df_MSFT_2
+```
+
+
+```{r}
+# Covariance between MSFT matching portfolio and Global minimum portfolio
+
+print(cov(returns_MSFT_Portfolio, returns_minvar))
+```
+
+
+### **Efficient Frontier**
+```{r fig.width=14}
+# Plot Entire Efficient Frontier
+
+req_returns<-seq(from=0.0001,to=0.002, by=0.00001) 
+
+n <- length(req_returns)
+means_1 <- array(0, c(n,1))
+volatilities <- array(0, c(n,1))
+
+for (i in 1:n){
+mu_0<-req_returns[i] #pick a particular expected return
+alpha<-as.numeric((mu_0-mean_minvar)/(mean_tangency -mean_minvar)) #find an optimal alpha,
+
+w<-alpha*weights_tangency+ (1-alpha)*weights_minvar #find portfolio weights
+means_1[i]<-t(w)%*%means #find portfolio return
+volatilities[i]<-sqrt(t(w)%*%covariance%*%w) # and its volatility
+}
+plot(volatilities, means_1, main="Efficient portfolio frontier", 
+xlab="Volatility (st.dev.)", ylab="Expected return")
+```
+
+
+### **Q1.10 Compare Results Across Time Periods**
+```{r}
+df_mrkt_return_1 <- as.data.frame(cbind(mean(df$SPRTRN), sd(df$SPRTRN), var(df$SPRTRN), (mean(df$SPRTRN)-mean(df$SPRTRN))/sd(df$SPRTRN))) 
+
+rownames(df_mrkt_return_1) <- c("Market Return (1990-2002)")
+colnames(df_mrkt_return_1) <- c("Expected Return", "Sample Volatility", "Sample Variance", "Sharpe Ratio")
+
+
+df_mrkt_return_2 <- as.data.frame(cbind(mean(df_11$SPRTRN), sd(df_11$SPRTRN), var(df_11$SPRTRN), (mean(df_11$SPRTRN)-mean(df_11$SPRTRN))/sd(df_11$SPRTRN))) 
+
+rownames(df_mrkt_return_2) <- c("Market Return (2003-2014)")
+colnames(df_mrkt_return_2) <- c("Expected Return", "Sample Volatility", "Sample Variance", "Sharpe Ratio")
+
+
+df_ew_1 <- round(df_ew_1, digits = 6)
+df_ew_2 <- round(df_ew_2, digits = 6)
+df_y_1 <- round(df_y_1, digits = 6)
+df_y_2 <- round(df_y_2, digits = 6)
+df_minvar_1 <- round(df_minvar_1, digits = 6)
+df_minvar_2 <- round(df_minvar_2, digits = 6)
+df_tangency_1 <- round(df_tangency_1, digits = 6)
+df_tangency_2 <- round(df_tangency_2, digits = 6)
+df_MSFT_1 <- round(df_MSFT_1, digits = 6)
+df_MSFT_2 <- round(df_MSFT_2, digits = 6)
+df_mrkt_return_1 <- round(df_mrkt_return_1, digits = 6)
+df_mrkt_return_2 <- round(df_mrkt_return_2, digits = 6)
+
+df_combined <- rbind(df_ew_1, df_ew_2, df_y_1, df_y_2, df_minvar_1, df_minvar_2, df_tangency_1, df_tangency_2, df_MSFT_1, df_MSFT_2, df_mrkt_return_1, df_mrkt_return_2)
+
+df_combined <- df_combined %>% 
+                  add_row(.before = 3) %>%
+                  mutate_all(~replace(., is.na(.), "")) %>%
+                  add_row(.before = 6) %>%
+                  mutate_all(~replace(., is.na(.), "")) %>%
+                  add_row(.before = 9) %>%
+                  mutate_all(~replace(., is.na(.), "")) %>%
+                  add_row(.before = 12) %>%
+                  mutate_all(~replace(., is.na(.), "")) %>%
+                  add_row(.before = 15) %>%
+                  mutate_all(~replace(., is.na(.), ""))
+
+row.names(df_combined)[3] <- "-"
+row.names(df_combined)[6] <- "--"
+row.names(df_combined)[9] <- "---"
+row.names(df_combined)[12] <- "----"
+row.names(df_combined)[15] <- "-----"
+
+print.data.frame(df_combined)
+```
+
+<br>
+
+For three of the four portfolios, the expected returns are higher during the 1990-2002 time period as compared to the 2003-2014 time period. The equally weighted portfolio has similar volatility and variance during these time periods, but it's Sharpe Ratio for the 1990-2002 time period is 0.036 whereas its Sharpe Ratio for the 2003-2014 time period is only 0.00877. Portfolio Y has higher volatility and variance in the 1990-2002 period when compared to the 2003-2014 period, but the Sharpe Ratio is positive in the 1990-2002 period and negative in the 2003-2014 period. The minimum variance portfolio also has higher volatility and variance in the 1990-2002 period when compared to the 2003-2014 period, but the Sharpe Ratio in the 1990-2002 period is much higher than the Sharpe Ratio is the 2003-2014 period. The tangency portfolio has much lower volatility and variance in the 1990-2002 period when compared to the 2003-2014 period, but the Sharpe Ratio in the 1990-2002 period is over two times higher than the Sharpe Ratio in the 2003-2014 period. That being said, the returns of the tangency portfolio during the 2003-2014 time period are roughly eight times higher than they are during the 1990-2002 time period. The MSFT matching portfolio has higher volatility and variance in the 1990-2002 period when compared to the 2003-2014 period, but the Sharpe Ratio for the 1990-2002 period is nearly nine times higher
+than the Sharpe Ratio for the 2003-2014 period. In short, three of the four portfolios examined here performed better during the 1990-2002 time period than they did in the 2003-2014 time period. There are a number of potential problems that could arise if investment decisions were to be made based on this analysis. Firstly, a portfolio that only has three different stocks is not a well-diversified portfolio and thus, idiosyncratic risk has a significant effect on returns. A simple solution to this would be to allocate capital to other stocks; preferably ones that are in different sectors from the three already contained in the portfolio. Further proof that this portfolio would benefit from diversification is illustrated by the fact that each portfolio has significantly more variance than the benchmark index. Additionally, while MSFT, JPM, and GE all exhibited relatively good returns during the 1990-2002 period, all of their returns fell drastically during the 2003-2014 time period. This suggests that the growth of these companies has slowed, which is natural. However, this indicates that in order to see returns similar to those in the 1990-2002 period, the portfolio must be diversified to include younger companies characterized by more explosive growth. It should also be noted that while the tangency portfolio sees very large returns during the 2003-2014 time period, the associated volatility is very high meaning this portfolio entails a very large degree of risk. 
+
+<br>
+
+<br>
+
+# **Part 2: Buffett's Alpha**
+
+<br>
+
+##### **Q2.1 Warren Buffett has a strong positive CAPM alpha. We normally think of a positive alpha as evidence of investment skill. Explain why a positive alpha is an indicator of skill.**
+
+Alpha is also referred to as excess returns, which are returns above those experiences by the market, or benchmark index, as a whole. An alpha of 0 indicates that the portfolio perfectly tracks the benchmark index, so in this case, the fund manager does not add or detract any value. With this information in mind, if a fund has a positive alpha, then the fund manager is better at picking stocks than the benchmark index. Typically, the benchmark index is taken to be the risk-free rate of return. If the fund’s returns exceed those of the risk-free asset, then the fund manager has enough skill to ‘beat the market’ [1].
+
+<br>
+
+##### **Q2.2 Is it possible for Buffett to both a) have a positive CAPM alpha and b) have no investment skill? Explain.**
+
+Technically, it is possible for this situation to occur, though it would be incredibly unlikely. There is a chance, however small it might be, that for all of the years Buffett has been investing, his excess returns have been a result of luck. Typically, these types of flukes only last a few years, but again, it is not entirely impossible that Buffett has just been lucky year after year.
+
+<br>
+
+##### **Q2.3 After reading the paper. Has your perception of Warren Buffett as one of most prominent and successful investors in the world changed?**
+
+My perception of Warren Buffet as one of the most prominent and successful investors in the world has not changed at all. I knew that Buffet had built his empire using his ability to pick very good investments by mostly buying fairly priced safe stocks. He has always been known as a value investor and his returns reflect the immense success of this strategy. 
+
+<br>
+
+##### **Q2.4 What is the main purpose of this paper? Put differently, what is the authors’ goal in this paper?**
+
+The main purpose of this paper is to explain Warren Buffet’s performance in the stock market via rigorous empirical analysis. Previous studies were incapable of accounting for Buffet’s alpha when using traditional factors. This paper explored new avenues in order to shed light on how exactly Buffet performed so well above the market for over 30 years. Additionally, the paper sought to systematically construct a portfolio that would emulate Buffett’s.
+
+<br>
+
+##### **Q2.5 What factors do the authors use to try to explain Buffett’s investment performance? Explain what return exposures these factors are trying to get exposures to.**
+
+The following list details the factors the authors use to try to explain Buffett’s investment performance.
+
+* Leverage: Leveraging a position entails borrowing capital or shares from a broker or other entity to add to your position. The loan has an attached interest rate which must be repaid in addition to the principle on the expiration date. 
+
+* Betting Against Beta (BAB): positive loading indicates a tendency to buy safe (i.e., low beta) stocks while shying away from risky stocks
+
+* Quality Minus Junk (QMJ): positive loading indicates a tendency to buy high-quality companies i.e., those that are profitable, growing, safe, and have a high payout
+
+* Small minus big (SMB): positive loading indicates a tendency to long small stocks and short large stocks 
+
+* High minus Low (HML): positive loading indicates a tendency to buy high-book-to-market stocks and short low-book-to-market stocks 
+
+* UMD: momentum factor; positive loading indicates a tendency to buy stocks that are “up” relative to the market 
+
+Buffet’s average leverage was estimated to be 1.6-to-1 which is part of the reason why Berkshire Hathaway sees such large excess returns when compared to the market. Additionally, most of this leverage comes from insurance float which means the average annual cost of this leverage is more than 3 percentage points below the average T-bill rate. Thus, Buffet can borrow at a much cheaper rate and magnify his returns. With respect to the SMB factor, the paper found that Berkshire Hathaway has a negative loading, indicating that Buffett takes long positions on large stocks and short positions on small stocks. The paper also found that Berkshire Hathaway has a positive loading on the HML factor which indicates Buffett tends to buy high-book-to-market stocks and short low-book-to-market stocks. The analysis in the paper concluded that Berkshire Hathaway has an insignificant loading on the UMD factor, suggesting Buffet never chased trends in his stock selection. Finally, it was found that Berkshire Hathaway has significant positive loadings on the BAB and QMJ factors, which further supports the loadings on the SMB and HML factors. The positive loadings on the BAB and QMJ factors suggest Buffett buys safe, high-quality stocks. When these all of these relevant factors were controlled for, the alpha of Berkshire Hathaway’s public stock portfolio was reduced to an annualized 0.3%. This means these factors account for nearly all of Buffett’s public portfolio performance [2]. 
+
+<br>
+
+##### **Q2.6 Should we give Buffett credit for his past high returns? Should we give him credit for future high returns if they are generated by maintaining his past factor exposures? Explain in detail.**
+
+We should absolutely give Buffett credit for his past high returns as his average annual excess return over the past few decades has been roughly 19%. Consistently beating the market by such a large margin for so many consecutive years is a result of Buffett’s immense skill, not luck. The principles with which he invests with are fundamentally sound and logical in nature. He began implementing such strategies years before they were formally published. He has also adjusted his factor exposures over time to control for the ever-changing market environment. Thus, if he continues to experience very high excess returns by maintaining his past factor exposures, then he ought to be given due credit.
+
+<br>
+
+<br>
+
+# **References**
+
+[1] Chen, J. (2021) *Alpha*. Available at: [link](https://www.investopedia.com/terms/a/alpha.asp) (Accessed 28 January 2022)
+
+[2] Frazzini, A., Kabiller, D., Pedersen, L.H. (2013) 'Buffett's Alpha', *Financial Analysts Journal*, 74(4), pp. 1-33
